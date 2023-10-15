@@ -27,6 +27,7 @@ def schema = project.property('schema')
 project.ext.schemaProperties = new Properties()
 // Oder lokal mit "file://..."
 // Oder commit-id statt main
+// Oder man checkt in der Jenkins-Pipeline beide Repos aus? Und immer mit lokalem File arbeiten?
 def iniFileLocation = "https://raw.githubusercontent.com/sogis-themen-config/${theme}/main/schema/${schema}/${schema}.ini"
 def iniFile = new File(Paths.get(pathToTempFolder, schema+".ini").toString())
 iniFile << new URL(iniFileLocation).getText()
