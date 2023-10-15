@@ -25,6 +25,7 @@ def schema = project.property('schema')
 // Wir benötigen die Datei lokal (für ili2pg) und aus der Datei 
 // zusätzliche Parameter zum Steuern der Tasks (z.B. Schemaversion).
 project.ext.schemaProperties = new Properties()
+// Problem: "raw" ist nur 5 Minuten aktuell (`Cache-Control: max-age=300`).
 // Oder lokal mit "file://..."
 // Oder commit-id statt main
 // Oder man checkt in der Jenkins-Pipeline beide Repos aus? Und immer mit lokalem File arbeiten?
