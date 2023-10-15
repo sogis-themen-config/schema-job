@@ -1,0 +1,135 @@
+import ch.so.agi.gretl.tasks.*
+import java.nio.file.Paths
+
+buildscript {
+    repositories {
+        maven { url "https://jars.interlis.ch" }
+        maven { url "https://repo.osgeo.org/repository/release/" }
+        maven { url "https://plugins.gradle.org/m2/" }
+        maven { url "https://s01.oss.sonatype.org/service/local/repositories/releases/content/" }
+        maven { url "https://s01.oss.sonatype.org/service/local/repositories/snapshots/content/" }
+        mavenCentral()
+    }
+    dependencies {
+        classpath "ch.so.agi:gretl:2.2.417"
+    }
+}
+
+apply plugin: "ch.so.agi.gretl"
+
+def pathToTempFolder = System.getProperty("java.io.tmpdir")
+
+def theme = project.property('theme')
+def schema = project.property('schema')
+
+// Wir benötigen die Datei lokal (für ili2pg) und aus der Datei 
+// zusätzliche Parameter zum Steuern der Tasks (z.B. Schemaversion).
+project.ext.schemaProperties = new Properties()
+// Oder lokal mit "file://..."
+// Oder commit-id statt main
+def iniFileLocation = "https://raw.githubusercontent.com/sogis-themen-config/${theme}/main/schema/${schema}/${schema}.ini"
+def iniFile = new File(Paths.get(pathToTempFolder, schema+".ini").toString())
+iniFile << new URL(iniFileLocation).getText()
+file(iniFile.getAbsolutePath()).withInputStream { project.ext.schemaProperties.load(it) }
+
+
+//def iniFileContent = new URL(iniFileLocation).text
+//def is = new ByteArrayInputStream(iniFileContent.getBytes());
+//project.ext.schemaProperties.load(is)
+
+def schemaVersion = schemaProperties.getProperty('version')
+project.ext.set('schemaName', "${schema}_v${schemaVersion}".toString())
+
+def dbName
+// Take the dbName property if it's set and if it's not null
+if (project.hasProperty('dbName') && project.dbName) {
+    dbName = project.property('dbName')
+} else {
+    // Determine the DB name from the createSchema Property file
+    def databases = schemaProperties.getProperty('databases')
+    if (!databases) {
+        throw new MissingPropertyException('The databases property is not defined.')
+    }
+    // The script can handle just one DB at a time.
+    // Therefore, in cases where a schema needs to be created in multiple DBs
+    // (i.e. if multiple DBs are specified in the databases property),
+    // the script is terminated here, and the user is prompted
+    // to pass the dbName property in order to choose a specific DB.
+    if (databases.split(',').size() == 1) {
+        dbName = databases
+    } else {
+        throw new Exception("Multiple databases defined in the property file: ${databases}; please pass the dbName property specifying which DB to choose.")
+    }
+}
+
+if (dbName == 'edit') {
+    project.ext.dbUri = project.property('dbUriEdit')
+    project.ext.dbUser = project.property('dbUserEditDdl')
+    project.ext.dbPwd = project.property('dbPwdEditDdl')
+} else if (dbName == 'pub') {
+    project.ext.dbUri = project.property('dbUriPub')
+    project.ext.dbUser = project.property('dbUserPubDdl')
+    project.ext.dbPwd = project.property('dbPwdPubDdl')
+} else if (dbName == 'oereb_v2') {
+    project.ext.dbUri = project.property('dbUriOerebV2')
+    project.ext.dbUser = project.property('dbUserOerebV2Ddl')
+    project.ext.dbPwd = project.property('dbPwdOerebV2Ddl')
+} else {
+    throw new Exception("No DB connection parameters defined for DB ${dbName}")
+}
+
+project.ext.set('dbSpecificSuffix', '')
+if ( schemaProperties.getProperty('databases') && schemaProperties.getProperty('databases').split(',').size()> 1 ) {
+    project.ext.set('dbSpecificSuffix', "_${dbName}db".toString())
+}
+
+tasks.register('fubar') {
+    doLast {
+        println "Hallo Welt"
+    }
+}
+
+tasks.register('dropSchema', SqlExecutor) {
+    group = 'Drop schema'
+    description = 'Drop DB schema and schema roles (roles for reading from and writing to the DB schema)'
+    doLast {
+        println "DB schema ${project.schemaName} and schema roles dropped"
+    }
+    database = [project.dbUri, project.dbUser, project.dbPwd]
+    sqlFiles = ['drop_schema.sql', 'drop_role.sql']
+    sqlParameters = [dbSchema: project.schemaName]
+}
+
+tasks.register('createEmptySchema', SqlExecutor) {
+    group = 'Create schema'
+    description = 'Create empty DB schema and schema roles (roles for reading from and writing to the DB schema)'
+    doLast {
+        println "DB schema ${project.schemaName} and schema roles created"
+    }
+    database = [project.dbUri, project.dbUser, project.dbPwd]
+    sqlFiles = ['create_schema.sql', 'create_role.sql']
+    sqlParameters = [dbSchema: project.schemaName, roleSuffix: project.dbSpecificSuffix]
+}
+
+tasks.register('createSchema', Ili2pgImportSchema) {
+    group = 'Create schema'
+    description = 'Create tables in schema according to INTERLIS model'
+    dependsOn 'createEmptySchema'
+    doLast {
+        println "Tables in DB schema ${project.schemaName} created according to INTERLIS model"
+    }
+    database = [project.dbUri, project.dbUser, project.dbPwd]
+    dbschema = project.schemaName
+    metaConfig = iniFile
+}
+
+tasks.register('grantPrivileges', SqlExecutor) {
+    group = 'Grant privileges'
+    description = 'Grant privileges on schema and tables to schema roles, and grant membership in those roles'
+    doLast {
+        println "Privileges for DB schema ${project.schemaName} granted"
+    }
+    database = [project.dbUri, project.dbUser, project.dbPwd]
+    sqlFiles = ['grant.sql']
+    sqlParameters = [dbSchema: project.schemaName, roleSuffix: project.dbSpecificSuffix]
+}
