@@ -139,3 +139,4 @@ tasks.register('grantPrivileges', SqlExecutor) {
     sqlFiles = ['grant.sql']
     sqlParameters = [dbSchema: project.schemaName, roleSuffix: project.dbSpecificSuffix]
 }
+
