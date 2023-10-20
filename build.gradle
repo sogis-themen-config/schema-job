@@ -20,8 +20,8 @@ apply plugin: "ch.so.agi.gretl"
 
 def pathToTempFolder = System.getProperty("java.io.tmpdir")
 
-println project.toString()+"**"
-println property('theme').toString()+"--"
+//println project.toString()+"**"
+//println property('theme').toString()+"--"
 
 def theme = project.property('theme')
 def schema = project.property('schema')
