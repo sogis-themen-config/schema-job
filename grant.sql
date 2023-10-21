@@ -18,3 +18,5 @@ TO ${dbSchema}${roleSuffix}_write;
 GRANT USAGE
 ON ALL SEQUENCES IN SCHEMA ${dbSchema}
 TO ${dbSchema}${roleSuffix}_write;
+
+GRANT ${dbSchema}${roleSuffix}_write TO dmluser;
