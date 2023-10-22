@@ -72,14 +72,17 @@ if (dbName == 'edit') {
     project.ext.dbUri = project.property('dbUriEdit')
     project.ext.dbUser = project.property('dbUserEditDdl')
     project.ext.dbPwd = project.property('dbPwdEditDdl')
+    project.ext.dbUserDml = project.property('dbUserEdit')
 } else if (dbName == 'pub') {
     project.ext.dbUri = project.property('dbUriPub')
     project.ext.dbUser = project.property('dbUserPubDdl')
     project.ext.dbPwd = project.property('dbPwdPubDdl')
+    project.ext.dbUserDml = project.property('dbUserPub')
 } else if (dbName == 'oereb_v2') {
     project.ext.dbUri = project.property('dbUriOerebV2')
     project.ext.dbUser = project.property('dbUserOerebV2Ddl')
     project.ext.dbPwd = project.property('dbPwdOerebV2Ddl')
+    project.ext.dbUserDml = project.property('dbUserOerebV2')
 } else {
     throw new Exception("No DB connection parameters defined for DB ${dbName}")
 }
@@ -137,7 +140,6 @@ tasks.register('grantPrivileges', SqlExecutor) {
     }
     database = [project.dbUri, project.dbUser, project.dbPwd]
     sqlFiles = ['grant.sql']
-    // Achtung: dbUser muss nicht zwingend der Benutzer sein, der auch connected.
-    sqlParameters = [dbSchema: project.schemaName, roleSuffix: project.dbSpecificSuffix, dbUser: project.dbUser]
+    sqlParameters = [dbSchema: project.schemaName, roleSuffix: project.dbSpecificSuffix, dbUser: project.dbUserDml]
 }
 
