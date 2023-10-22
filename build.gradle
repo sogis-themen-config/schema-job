@@ -137,6 +137,7 @@ tasks.register('grantPrivileges', SqlExecutor) {
     }
     database = [project.dbUri, project.dbUser, project.dbPwd]
     sqlFiles = ['grant.sql']
-    sqlParameters = [dbSchema: project.schemaName, roleSuffix: project.dbSpecificSuffix]
+    // Achtung: dbUser muss nicht zwingend der Benutzer sein, der auch connected.
+    sqlParameters = [dbSchema: project.schemaName, roleSuffix: project.dbSpecificSuffix, dbUser: project.dbUser]
 }
 
